@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rete Territoriale Demenza — Milano</title>
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -140,21 +140,21 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 .mun-btn.all.active { background:var(--bg); color:var(--text-secondary); border-color:var(--border-strong); }
 
 /* ── MAPBOX overrides ── */
-.maplibregl-ctrl-top-right { display:none !important; }
-.maplibregl-ctrl-bottom-right { display:none !important; }
-.maplibregl-ctrl-bottom-left { display:none !important; }
-.maplibregl-popup { z-index:300; }
-.maplibregl-popup-content {
+.mapboxgl-ctrl-top-right { display:none !important; }
+.mapboxgl-ctrl-bottom-right { display:none !important; }
+.mapboxgl-ctrl-bottom-left { display:none !important; }
+.mapboxgl-popup { z-index:300; }
+.mapboxgl-popup-content {
   padding:0; border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
   border:1px solid rgba(0,0,0,0.09); overflow:hidden; width:300px; background:var(--surface);
 }
-.maplibregl-popup-close-button {
+.mapboxgl-popup-close-button {
   font-size:18px; color:var(--text-secondary); width:32px; height:32px;
   top:8px; right:8px; border-radius:50%; display:flex; align-items:center;
   justify-content:center; z-index:2;
 }
-.maplibregl-popup-close-button:hover { background:var(--bg); }
-.maplibregl-popup-tip { display:none; }
+.mapboxgl-popup-close-button:hover { background:var(--bg); }
+.mapboxgl-popup-tip { display:none; }
 
 /* ── POPUP ── */
 .popup-macro-bar { height:4px; width:100%; }
@@ -316,9 +316,10 @@ const MUNICIPI_CENTERS = {
 };
 
 // ── Map ──
-const map = new maplibregl.Map({
+mapboxgl.accessToken = 'pk.eyJ1IjoiYWJhcmNpIiwiYSI6ImNtcGcwdzNxZjBreWMycHF2cnVnOXBlOHEifQ.x1anGUZBuS4bmUG5RKQoRw';
+const map = new mapboxgl.Map({
   container: 'map',
-  style: 'https://tiles.stadiamaps.com/styles/alidade_smooth.json?api_key=25a74afc-6d08-4958-9946-f1b1211f9da0',
+  style: 'mapbox://styles/mapbox/light-v11',
   center: [9.19, 45.4654],
   zoom: 11.5,
   pitch: 0,
@@ -344,18 +345,17 @@ map.on('move', updateZoomLabel);
 
 // ── Map load: add layers + markers ──
 map.on('load', () => {
-  // Add 3D buildings layer (initially hidden)
-  // Stadia vector tiles include building heights from OpenStreetMap
+  // 3D buildings — Mapbox native composite source
   map.addLayer({
     id: 'building-extrusions',
     type: 'fill-extrusion',
-    source: 'openmaptiles',
+    source: 'composite',
     'source-layer': 'building',
-    filter: ['==', '$type', 'Polygon'],
+    filter: ['==', 'extrude', 'true'],
     paint: {
       'fill-extrusion-color': '#E8E5DE',
-      'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 5],
-      'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
+      'fill-extrusion-height': ['get', 'height'],
+      'fill-extrusion-base': ['get', 'min_height'],
       'fill-extrusion-opacity': 0,
     },
   });
@@ -421,7 +421,7 @@ function createMarker(node) {
 
   el.addEventListener('click', (e) => { e.stopPropagation(); handleMarkerClick(node, el); });
 
-  const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+  const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
     .setLngLat([node.lon, node.lat])
     .addTo(map);
   markers[node.id] = { marker, el, node };
@@ -466,7 +466,7 @@ function handleMarkerClick(node, el) {
       </button>
     </div>`;
 
-  currentPopup = new maplibregl.Popup({ closeButton:true, closeOnClick:false, offset:[0,-10], maxWidth:'300px' })
+  currentPopup = new mapboxgl.Popup({ closeButton:true, closeOnClick:false, offset:[0,-10], maxWidth:'300px' })
     .setLngLat([node.lon, node.lat])
     .setHTML(popupHTML)
     .addTo(map);
