@@ -316,11 +316,33 @@ const MUNICIPI_CENTERS = {
 };
 
 // ── Map ──
-// maplibregl.accessToken = 'pk.eyJ1IjoiYWJhcmNpIiwiYSI6ImNtcGcwdzNxZjBreWMycHF2cnVnOXBlOHEifQ.x1anGUZBuS4bmUG5RKQoRw';
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWJhcmNpIiwiYSI6ImNtcGcwdzNxZjBreWMycHF2cnVnOXBlOHEifQ.x1anGUZBuS4bmUG5RKQoRw';
 const map = new maplibregl.Map({
   container: 'map',
-  style: `https://api.mapbox.com/styles/v1/mapbox/light-v11?access_token=pk.eyJ1IjoiYWJhcmNpIiwiYSI6ImNtcGcwdzNxZjBreWMycHF2cnVnOXBlOHEifQ.x1anGUZBuS4bmUG5RKQoRw`,
+  style: {
+    version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources: {
+      'osm': {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors',
+        maxzoom: 19
+      }
+    },
+    layers: [{
+      id: 'osm-tiles',
+      type: 'raster',
+      source: 'osm',
+      paint: {
+        'raster-opacity': 0.88,
+        'raster-saturation': -0.45,
+        'raster-brightness-min': 0.05,
+        'raster-brightness-max': 0.92,
+        'raster-contrast': 0.05,
+      }
+    }]
+  },
   center: [9.19, 45.4654],
   zoom: 11.5,
   pitch: 0,
@@ -347,24 +369,7 @@ map.on('move', updateZoomLabel);
 // ── Map load: add layers + markers ──
 map.on('load', () => {
   // Add 3D buildings layer (initially hidden)
-  map.addSource('composite-3d', {
-    type: 'vector',
-    url: `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8.json?access_token=pk.eyJ1IjoiYWJhcmNpIiwiYSI6ImNtcGcwdzNxZjBreWMycHF2cnVnOXBlOHEifQ.x1anGUZBuS4bmUG5RKQoRw`,
-  });
-  map.addLayer({
-    id: 'building-extrusions',
-    type: 'fill-extrusion',
-    source: 'composite-3d',
-    'source-layer': 'building',
-    filter: ['==', 'extrude', 'true'],
-    paint: {
-      'fill-extrusion-color': '#E8E5DE',
-      'fill-extrusion-height': ['get', 'height'],
-      'fill-extrusion-base': ['get', 'min_height'],
-      'fill-extrusion-opacity': 0,
-    },
-    layout: { visibility: 'visible' },
-  });
+  // 3D buildings not available with OSM tiles
 
   // Add municipi overlay
   map.addSource('municipi', { type: 'geojson', data: MUNICIPI_GEOJSON });
@@ -533,14 +538,14 @@ function setView2D() {
   is3D = false;
   stopOrbit();
   map.easeTo({ pitch:0, bearing:0, duration:700 });
-  map.setPaintProperty('building-extrusions', 'fill-extrusion-opacity', 0);
+  // 3D building extrusions not available with OSM tiles
   document.getElementById('btn-2d').classList.add('active');
   document.getElementById('btn-3d').classList.remove('active');
 }
 function setView3D() {
   is3D = true;
   map.easeTo({ pitch:52, bearing:-15, zoom:Math.max(map.getZoom(), 13), duration:900 });
-  map.setPaintProperty('building-extrusions', 'fill-extrusion-opacity', 0.65);
+  // 3D building extrusions not available with OSM tiles
   document.getElementById('btn-3d').classList.add('active');
   document.getElementById('btn-2d').classList.remove('active');
 }
@@ -657,8 +662,10 @@ function munContains(id, lat, lon) {
 
 // ── Map click: close popup ──
 map.on('click', (e) => {
-  const features = map.queryRenderedFeatures(e.point, { layers: ['municipi-fill'] });
-  if (features.length) return; // handled by municipio click
+  try {
+    const features = map.queryRenderedFeatures(e.point, { layers: ['municipi-fill'] });
+    if (features.length) return;
+  } catch(err) { /* layer not yet ready */ }
   if (currentPopup) { currentPopup.remove(); currentPopup = null; stopOrbit(); }
   if (activeMarkerId) { const p = markers[activeMarkerId]; if (p) p.el.classList.remove('active'); activeMarkerId = null; }
 });
