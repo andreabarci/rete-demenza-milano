@@ -318,31 +318,7 @@ const MUNICIPI_CENTERS = {
 // ── Map ──
 const map = new maplibregl.Map({
   container: 'map',
-  style: {
-    version: 8,
-    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-    sources: {
-      'osm': {
-        type: 'raster',
-        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-        tileSize: 256,
-        attribution: '© OpenStreetMap contributors',
-        maxzoom: 19
-      }
-    },
-    layers: [{
-      id: 'osm-tiles',
-      type: 'raster',
-      source: 'osm',
-      paint: {
-        'raster-opacity': 0.88,
-        'raster-saturation': -0.45,
-        'raster-brightness-min': 0.05,
-        'raster-brightness-max': 0.92,
-        'raster-contrast': 0.05,
-      }
-    }]
-  },
+  style: 'https://tiles.stadiamaps.com/styles/alidade_smooth.json?api_key=25a74afc-6d08-4958-9946-f1b1211f9da0',
   center: [9.19, 45.4654],
   zoom: 11.5,
   pitch: 0,
@@ -369,7 +345,20 @@ map.on('move', updateZoomLabel);
 // ── Map load: add layers + markers ──
 map.on('load', () => {
   // Add 3D buildings layer (initially hidden)
-  // 3D buildings not available with OSM tiles
+  // Stadia vector tiles include building heights from OpenStreetMap
+  map.addLayer({
+    id: 'building-extrusions',
+    type: 'fill-extrusion',
+    source: 'openmaptiles',
+    'source-layer': 'building',
+    filter: ['==', '$type', 'Polygon'],
+    paint: {
+      'fill-extrusion-color': '#E8E5DE',
+      'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 5],
+      'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
+      'fill-extrusion-opacity': 0,
+    },
+  });
 
   // Add municipi overlay
   map.addSource('municipi', { type: 'geojson', data: MUNICIPI_GEOJSON });
@@ -538,14 +527,14 @@ function setView2D() {
   is3D = false;
   stopOrbit();
   map.easeTo({ pitch:0, bearing:0, duration:700 });
-  // 3D building extrusions not available with OSM tiles
+  map.setPaintProperty('building-extrusions', 'fill-extrusion-opacity', 0);
   document.getElementById('btn-2d').classList.add('active');
   document.getElementById('btn-3d').classList.remove('active');
 }
 function setView3D() {
   is3D = true;
   map.easeTo({ pitch:52, bearing:-15, zoom:Math.max(map.getZoom(), 13), duration:900 });
-  // 3D building extrusions not available with OSM tiles
+  map.setPaintProperty('building-extrusions', 'fill-extrusion-opacity', 0.65);
   document.getElementById('btn-3d').classList.add('active');
   document.getElementById('btn-2d').classList.remove('active');
 }
