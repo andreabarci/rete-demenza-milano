@@ -176,7 +176,7 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 /* ── MARKERS ── */
 .marker-outer { display:flex; flex-direction:column; align-items:center; pointer-events:none; }
 .marker-icon {
-  display:block; width:26px; height:26px; border-radius:50%; object-fit:cover;
+  display:block; width:32px; height:32px; border-radius:50%; object-fit:cover;
   box-shadow:0 0 0 1.25px rgba(255,255,255,0.95), 0 1px 2px rgba(0,0,0,0.62);
   cursor:pointer; background:#fff; pointer-events:auto;
   transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s ease, filter 0.18s ease;
@@ -575,15 +575,19 @@ map.on('load', () => {
   map.on('mouseenter', 'municipi-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'municipi-fill', () => { map.getCanvas().style.cursor = ''; });
 
-  // Cluster hover-area overlay (shows the bounding area being aggregated)
+  // Cluster hover-area overlay — circular, centered on the cluster marker,
+  // radius in screen pixels matches Supercluster's own aggregation radius.
   map.addSource('cluster-hover-area', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
   map.addLayer({
-    id: 'cluster-hover-fill', type: 'fill', source: 'cluster-hover-area',
-    paint: { 'fill-color': '#1A1A1A', 'fill-opacity': 0.07 },
-  });
-  map.addLayer({
-    id: 'cluster-hover-line', type: 'line', source: 'cluster-hover-area',
-    paint: { 'line-color': '#1A1A1A', 'line-width': 1.2, 'line-dasharray': [2, 2], 'line-opacity': 0.45 },
+    id: 'cluster-hover-circle', type: 'circle', source: 'cluster-hover-area',
+    paint: {
+      'circle-radius': CLUSTER_RADIUS_PX,
+      'circle-color': '#1A1A1A',
+      'circle-opacity': 0.07,
+      'circle-stroke-width': 1.2,
+      'circle-stroke-color': '#1A1A1A',
+      'circle-stroke-opacity': 0.45,
+    },
   });
 
   // Markers + clustering
@@ -593,10 +597,11 @@ map.on('load', () => {
 map.on('moveend', renderClusters);
 
 // ── Clustering ──
+const CLUSTER_RADIUS_PX = 110; // screen-pixel aggregation radius, shared with the hover-area circle
 function buildClusterIndex(nodes) {
   clusterIndex = new Supercluster({
-    radius: 110,
-    maxZoom: 14,
+    radius: CLUSTER_RADIUS_PX,
+    maxZoom: 13, // clusters exist through zoom 13.999; zoom 14+ always shows individual points
     map: (props) => ({
       sanitario:      props.macro === 'sanitario'      ? 1 : 0,
       sociosanitario: props.macro === 'sociosanitario' ? 1 : 0,
@@ -649,28 +654,12 @@ function renderClusters() {
   });
 }
 
-// ── Cluster hover area (which points are being aggregated) ──
-function showClusterArea(clusterId) {
-  const leaves = clusterIndex.getLeaves(clusterId, Infinity);
-  if (!leaves.length) return;
-  const lons = leaves.map(f => f.geometry.coordinates[0]);
-  const lats = leaves.map(f => f.geometry.coordinates[1]);
-  const minLon = Math.min(...lons), maxLon = Math.max(...lons);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  const padLon = Math.max((maxLon - minLon) * 0.15, 0.0015);
-  const padLat = Math.max((maxLat - minLat) * 0.15, 0.0015);
-
-  const feature = {
-    type: 'Feature',
-    geometry: { type: 'Polygon', coordinates: [[
-      [minLon - padLon, minLat - padLat],
-      [maxLon + padLon, minLat - padLat],
-      [maxLon + padLon, maxLat + padLat],
-      [minLon - padLon, maxLat + padLat],
-      [minLon - padLon, minLat - padLat],
-    ]] },
-  };
-  map.getSource('cluster-hover-area').setData({ type: 'FeatureCollection', features: [feature] });
+// ── Cluster hover area (circle centered on the cluster marker, radius = aggregation radius) ──
+function showClusterArea(lon, lat) {
+  map.getSource('cluster-hover-area').setData({
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] } }],
+  });
 }
 function hideClusterArea() {
   const source = map.getSource('cluster-hover-area');
@@ -694,15 +683,14 @@ function buildDonutGradient(counts) {
 }
 
 function clusterSize(count) {
-  // Min size matches a classic single marker (24px); grows with count but is capped
+  // Min size matches a classic single marker (32px); grows with count but is capped
   // so big clusters don't balloon out of proportion.
-  return Math.min(56, 24 + Math.sqrt(count) * 4);
+  return Math.min(64, 32 + Math.sqrt(count) * 4);
 }
 
 function createClusterMarker(feature) {
   const [lon, lat] = feature.geometry.coordinates;
   const props = feature.properties;
-  const cid = props.cluster_id;
   const count = props.point_count;
   const counts = {
     sanitario:      props.sanitario      || 0,
@@ -739,14 +727,14 @@ function createClusterMarker(feature) {
   wrapper.appendChild(el);
   wrapper.appendChild(stem);
 
-  el.addEventListener('mouseenter', () => showClusterArea(cid));
+  el.addEventListener('mouseenter', () => showClusterArea(lon, lat));
   el.addEventListener('mouseleave', hideClusterArea);
 
   el.addEventListener('click', (e) => {
     e.stopPropagation();
     hideClusterArea();
-    const expansionZoom = Math.min(clusterIndex.getClusterExpansionZoom(cid), 20);
-    map.flyTo({ center: [lon, lat], zoom: expansionZoom, duration: 600, essential: true });
+    // Always land exactly on zoom 14 — the first level where clusters no longer exist.
+    map.flyTo({ center: [lon, lat], zoom: 14, duration: 600, essential: true });
   });
 
   const marker = new mapboxgl.Marker({ element: wrapper, anchor: 'bottom' })
