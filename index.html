@@ -202,9 +202,8 @@ body.view-3d .marker-stem::after { opacity:1; }
 .marker-icon.locale         { background:var(--c-locale); }
 
 /* ── CLUSTERS ── */
-.cluster-outer { display:flex; pointer-events:none; }
 .cluster-marker {
-  pointer-events:auto; width:42.07px; height:42.07px;
+  pointer-events:auto;
   border-radius:50%; display:flex; align-items:center; justify-content:center;
   box-shadow:0 0 0 1.25px rgba(255,255,255,0.95), 0 1px 3px rgba(0,0,0,0.55);
   cursor:pointer; will-change:transform;
@@ -212,10 +211,9 @@ body.view-3d .marker-stem::after { opacity:1; }
 }
 .cluster-marker:hover { transform:scale(1.12); box-shadow:0 0 0 1.25px rgba(255,255,255,0.95), 0 2px 6px rgba(0,0,0,0.6); }
 .cluster-inner {
-  width:26px; height:26px; border-radius:50%; background:#fff;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-mono); font-size:12px; font-weight:500; color:var(--text-primary);
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06);
+  width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-weight:600; color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.4);
 }
 
 /* ── MARKER TOOLTIP ── */
@@ -577,6 +575,17 @@ map.on('load', () => {
   map.on('mouseenter', 'municipi-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'municipi-fill', () => { map.getCanvas().style.cursor = ''; });
 
+  // Cluster hover-area overlay (shows the bounding area being aggregated)
+  map.addSource('cluster-hover-area', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  map.addLayer({
+    id: 'cluster-hover-fill', type: 'fill', source: 'cluster-hover-area',
+    paint: { 'fill-color': '#1A1A1A', 'fill-opacity': 0.07 },
+  });
+  map.addLayer({
+    id: 'cluster-hover-line', type: 'line', source: 'cluster-hover-area',
+    paint: { 'line-color': '#1A1A1A', 'line-width': 1.2, 'line-dasharray': [2, 2], 'line-opacity': 0.45 },
+  });
+
   // Markers + clustering
   buildClusterIndex(DATASET);
   renderClusters();
@@ -587,7 +596,7 @@ map.on('moveend', renderClusters);
 function buildClusterIndex(nodes) {
   clusterIndex = new Supercluster({
     radius: 110,
-    maxZoom: 16,
+    maxZoom: 14,
     map: (props) => ({
       sanitario:      props.macro === 'sanitario'      ? 1 : 0,
       sociosanitario: props.macro === 'sociosanitario' ? 1 : 0,
@@ -610,6 +619,7 @@ function buildClusterIndex(nodes) {
 
 function renderClusters() {
   if (!clusterIndex) return;
+  hideClusterArea();
   const b = map.getBounds();
   const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
   const zoom = Math.floor(map.getZoom());
@@ -639,6 +649,34 @@ function renderClusters() {
   });
 }
 
+// ── Cluster hover area (which points are being aggregated) ──
+function showClusterArea(clusterId) {
+  const leaves = clusterIndex.getLeaves(clusterId, Infinity);
+  if (!leaves.length) return;
+  const lons = leaves.map(f => f.geometry.coordinates[0]);
+  const lats = leaves.map(f => f.geometry.coordinates[1]);
+  const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const padLon = Math.max((maxLon - minLon) * 0.15, 0.0015);
+  const padLat = Math.max((maxLat - minLat) * 0.15, 0.0015);
+
+  const feature = {
+    type: 'Feature',
+    geometry: { type: 'Polygon', coordinates: [[
+      [minLon - padLon, minLat - padLat],
+      [maxLon + padLon, minLat - padLat],
+      [maxLon + padLon, maxLat + padLat],
+      [minLon - padLon, maxLat + padLat],
+      [minLon - padLon, minLat - padLat],
+    ]] },
+  };
+  map.getSource('cluster-hover-area').setData({ type: 'FeatureCollection', features: [feature] });
+}
+function hideClusterArea() {
+  const source = map.getSource('cluster-hover-area');
+  if (source) source.setData({ type: 'FeatureCollection', features: [] });
+}
+
 function buildDonutGradient(counts) {
   const order = ['sanitario', 'sociosanitario', 'sociale', 'locale'];
   const total = order.reduce((s, k) => s + counts[k], 0) || 1;
@@ -655,9 +693,16 @@ function buildDonutGradient(counts) {
   return `conic-gradient(${stops.join(', ')})`;
 }
 
+function clusterSize(count) {
+  // Min size matches a classic single marker (24px); grows with count but is capped
+  // so big clusters don't balloon out of proportion.
+  return Math.min(56, 24 + Math.sqrt(count) * 4);
+}
+
 function createClusterMarker(feature) {
   const [lon, lat] = feature.geometry.coordinates;
   const props = feature.properties;
+  const cid = props.cluster_id;
   const count = props.point_count;
   const counts = {
     sanitario:      props.sanitario      || 0,
@@ -666,29 +711,45 @@ function createClusterMarker(feature) {
     locale:         props.locale         || 0,
   };
 
+  const size = clusterSize(count);
+
   // Mapbox positions "wrapper" via its own inline transform — the hover/click
   // element must be a child, otherwise our CSS :hover transform gets clobbered.
+  // Reuses the same wrapper/stem classes as individual markers so clusters get
+  // the identical 3D "pin to ground" thread for free.
   const wrapper = document.createElement('div');
-  wrapper.className = 'cluster-outer';
+  wrapper.className = 'marker-outer';
 
   const el = document.createElement('div');
   el.className = 'cluster-marker';
+  el.style.width = `${size}px`;
+  el.style.height = `${size}px`;
   el.style.background = buildDonutGradient(counts);
   el.title = `${count} ${count === 1 ? 'attore' : 'attori'}`;
 
   const inner = document.createElement('div');
   inner.className = 'cluster-inner';
+  inner.style.fontSize = `${Math.max(11, size * 0.34)}px`;
   inner.textContent = count;
   el.appendChild(inner);
+
+  const stem = document.createElement('div');
+  stem.className = 'marker-stem';
+
   wrapper.appendChild(el);
+  wrapper.appendChild(stem);
+
+  el.addEventListener('mouseenter', () => showClusterArea(cid));
+  el.addEventListener('mouseleave', hideClusterArea);
 
   el.addEventListener('click', (e) => {
     e.stopPropagation();
-    const expansionZoom = Math.min(clusterIndex.getClusterExpansionZoom(props.cluster_id), 20);
+    hideClusterArea();
+    const expansionZoom = Math.min(clusterIndex.getClusterExpansionZoom(cid), 20);
     map.flyTo({ center: [lon, lat], zoom: expansionZoom, duration: 600, essential: true });
   });
 
-  const marker = new mapboxgl.Marker({ element: wrapper, anchor: 'center' })
+  const marker = new mapboxgl.Marker({ element: wrapper, anchor: 'bottom' })
     .setLngLat([lon, lat])
     .addTo(map);
 
