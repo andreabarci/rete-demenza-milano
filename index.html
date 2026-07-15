@@ -448,16 +448,16 @@ const CUSTOM_MAP_STYLE = {
       paint: { 'line-color': '#CCCAC2', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 16, 6] } },
     { id: 'label-road', type: 'symbol',
       source: 'composite', 'source-layer': 'road',
-      minzoom: 13,
+      minzoom: 12,
       filter: ['match', ['get', 'class'], ['primary', 'secondary', 'tertiary', 'street'], true, false],
       layout: {
         'text-field': ['coalesce', ['get', 'name_it'], ['get', 'name']],
         'text-font': ['DIN Pro Regular', 'Arial Unicode MS Regular'],
         'text-size': 10,
-        'symbol-placement': 'line',
+        'symbol-placement': 'line-center',
         'text-letter-spacing': 0.01,
       },
-      paint: { 'text-color': '#A09D97', 'text-halo-color': '#F5F3EE', 'text-halo-width': 1.5 } },
+      paint: { 'text-color': '#A09D97', 'text-halo-color': '#F5F3EE', 'text-halo-width': 2 } },
     { id: 'label-neighborhood', type: 'symbol',
       source: 'composite', 'source-layer': 'place_label',
       minzoom: 12,
@@ -466,7 +466,7 @@ const CUSTOM_MAP_STYLE = {
         'text-field': ['coalesce', ['get', 'name_it'], ['get', 'name']],
         'text-font': ['DIN Pro Regular', 'Arial Unicode MS Regular'],
         'text-size': ['interpolate', ['linear'], ['zoom'], 12, 9, 15, 11],
-        'text-letter-spacing': 0.06,
+        'text-letter-spacing': 0.12,
         'text-transform': 'uppercase',
       },
       paint: { 'text-color': '#B0ADA7', 'text-halo-color': '#F5F3EE', 'text-halo-width': 1.5 } },
@@ -553,16 +553,21 @@ map.on('load', () => {
     id: 'municipi-label',
     type: 'symbol',
     source: 'municipi',
+    minzoom: 10.5,
     layout: {
       'text-field': ['get', 'name'],
-      'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
-      'text-size': 10,
+      'text-font': ['DIN Pro Regular', 'Arial Unicode MS Regular'],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 10.5, 11, 14, 13],
+      'text-transform': 'uppercase',
+      'text-letter-spacing': 0.12,
       'text-anchor': 'center',
-      visibility: 'none',
+      visibility: 'visible',
     },
     paint: {
-      'text-color': '#1A1A1A',
-      'text-opacity': 0,
+      'text-color': '#8A8783',
+      'text-halo-color': '#F5F3EE',
+      'text-halo-width': 1.5,
+      'text-opacity': 0.65,
     },
   });
 
@@ -939,18 +944,16 @@ function toggleMunicipiPanel() {
   panel.classList.toggle('visible');
   btn.classList.toggle('active');
 
-  // Show/hide GeoJSON overlay
+  // Show/hide boundary overlay; the "Municipio N" labels themselves stay
+  // visible at all times, just emphasized while the filter panel is open.
   const visible = panel.classList.contains('visible');
   const opacity = visible ? 0.06 : 0;
   const lineOp  = visible ? 0.35 : 0;
-  const textOp  = visible ? 0.8  : 0;
+  const textOp  = visible ? 0.9  : 0.65;
   map.setPaintProperty('municipi-fill', 'fill-opacity', opacity);
   map.setPaintProperty('municipi-line', 'line-opacity', lineOp);
   map.setPaintProperty('municipi-label', 'text-opacity', textOp);
-  if (visible) {
-    map.setLayoutProperty('municipi-label', 'visibility', 'visible');
-  } else {
-    map.setLayoutProperty('municipi-label', 'visibility', 'none');
+  if (!visible) {
     filterMunicipio(null);
   }
 }
