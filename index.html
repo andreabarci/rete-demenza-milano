@@ -7,13 +7,12 @@
 <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
 <script src="https://unpkg.com/supercluster@8.0.1/dist/supercluster.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <style>
 :root {
   --c-sanitario:      #183c59;
   --c-sociosanitario: #186eb6;
   --c-sociale:        #e84b1e;
-  --bg:               #F5F3EE;
+  --bg:               #FAF8F3;
   --surface:          #FFFFFF;
   --text-primary:     #1A1A1A;
   --text-secondary:   #6B6760;
@@ -23,9 +22,9 @@
   --shadow-lg:        0 20px 60px rgba(0,0,0,0.18);
   --radius-sm:        8px;
   --radius-md:        14px;
-  --font-display:     'Instrument Serif', serif;
-  --font-body:        'DM Sans', sans-serif;
-  --font-mono:        'DM Mono', monospace;
+  --font-display:     'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-body:        'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono:        'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --nav-w:            clamp(340px, 23vw, 420px);
   --transition:       0.26s cubic-bezier(0.4,0,0.2,1);
 }
@@ -96,6 +95,15 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 }
 .percorso-card-btn:hover { background:var(--bg); }
 .percorso-card.active .percorso-card-btn { background:var(--text-primary); color:var(--surface); border-color:var(--text-primary); }
+.detail-back-btn {
+  display:flex; align-items:center; gap:6px; background:none; border:none; padding:0 0 16px;
+  font-family:var(--font-body); font-size:12px; font-weight:500; color:var(--text-secondary);
+  cursor:pointer; transition:color var(--transition);
+}
+.detail-back-btn:hover { color:var(--text-primary); }
+.percorso-detail-id { font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); letter-spacing:0.06em; }
+.percorso-detail-name { font-family:var(--font-display); font-size:20px; margin:2px 0 12px; }
+.percorso-detail-desc { font-size:13px; line-height:1.65; color:var(--text-secondary); margin-bottom:16px; }
 
 /* ── CONTROLS PANEL (bottom-right) ── */
 #ctrl-panel {
@@ -103,7 +111,7 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
   display:flex; flex-direction:column; gap:6px; align-items:flex-end;
 }
 .ctrl-group {
-  background:rgba(245,243,238,0.95); backdrop-filter:blur(12px);
+  background:rgba(250,248,243,0.95); backdrop-filter:blur(12px);
   border:1px solid var(--border-strong); border-radius:var(--radius-sm);
   overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.1);
   display:flex; flex-direction:column;
@@ -129,7 +137,7 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 
 /* Zoom label */
 #zoom-label {
-  background:rgba(245,243,238,0.95); backdrop-filter:blur(12px);
+  background:rgba(250,248,243,0.95); backdrop-filter:blur(12px);
   border:1px solid var(--border-strong); border-radius:var(--radius-sm);
   padding:5px 10px; font-family:var(--font-mono); font-size:10px;
   letter-spacing:0.06em; color:var(--text-secondary);
@@ -139,7 +147,7 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 /* ── MUNICIPI LEGEND (bottom-left) ── */
 #municipi-panel {
   position:fixed; bottom:20px; left:calc(var(--nav-w) + 16px); z-index:150;
-  background:rgba(245,243,238,0.95); backdrop-filter:blur(12px);
+  background:rgba(250,248,243,0.95); backdrop-filter:blur(12px);
   border:1px solid var(--border-strong); border-radius:var(--radius-sm);
   box-shadow:0 2px 12px rgba(0,0,0,0.1);
   padding:10px 12px; display:none; flex-direction:column; gap:6px;
@@ -182,15 +190,14 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 .popup-name { font-family:var(--font-display); font-size:15px; line-height:1.3; color:var(--text-primary); margin-bottom:10px; }
 .popup-address { font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:11px; display:flex; gap:5px; align-items:flex-start; }
 .popup-address svg { flex-shrink:0; margin-top:1px; }
+.popup-image { width:100%; aspect-ratio:16/9; border-radius:var(--radius-sm); overflow:hidden; margin-bottom:12px; background:var(--bg); }
+.popup-image img { width:100%; height:100%; object-fit:cover; display:block; }
 .popup-percorsi { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:11px; }
 .popup-percorso-tag { font-family:var(--font-mono); font-size:10px; letter-spacing:0.04em; padding:3px 8px; border-radius:100px; background:var(--bg); color:var(--text-secondary); border:1px solid rgba(0,0,0,0.08); }
 .popup-desc { font-size:12.5px; line-height:1.55; color:var(--text-secondary); }
 .popup-desc.collapsed { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 .popup-expand { background:none; border:none; font-family:var(--font-mono); font-size:10px; letter-spacing:0.06em; color:var(--text-tertiary); cursor:pointer; padding:4px 0 0; display:flex; align-items:center; gap:4px; margin-top:5px; }
 .popup-expand:hover { color:var(--text-primary); }
-.popup-cta { display:flex; align-items:center; justify-content:space-between; width:100%; padding:11px 14px; border:none; border-top:1px solid rgba(0,0,0,0.07); background:var(--bg); font-family:var(--font-body); font-size:12.5px; font-weight:500; color:var(--text-primary); cursor:pointer; transition:background var(--transition); margin-top:10px; border-radius:0 0 var(--radius-md) var(--radius-md); }
-.popup-cta:hover { background:#EDEBE5; }
-.popup-cta svg { opacity:0.5; }
 
 /* ── MARKERS ── */
 .marker-outer { display:flex; flex-direction:column; align-items:center; pointer-events:none; }
@@ -252,7 +259,7 @@ body.view-3d .marker-stem::after { opacity:1; }
 /* ── SIDEBAR ── */
 #sidebar {
   position:fixed; top:0; left:var(--nav-w); bottom:0; width:340px; z-index:190;
-  background:var(--surface); box-shadow:2px 0 24px rgba(0,0,0,0.14);
+  background:var(--bg); box-shadow:2px 0 24px rgba(0,0,0,0.14);
   transform:translateX(-100%); transition:transform var(--transition);
   overflow-y:auto; display:flex; flex-direction:column;
 }
@@ -305,7 +312,20 @@ body.view-3d .marker-stem::after { opacity:1; }
     </div>
 
     <div class="tab-panel" id="tab-percorsi">
-      <div id="percorsi-list"></div>
+      <div id="percorsi-list-view">
+        <div id="percorsi-list"></div>
+      </div>
+      <div id="percorsi-detail-view" style="display:none">
+        <button class="detail-back-btn" onclick="closePercorsoDetail()">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M8 1.5L3 5l5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Torna ai percorsi
+        </button>
+        <div class="percorso-detail-id" id="percorso-detail-id"></div>
+        <div class="percorso-detail-name" id="percorso-detail-name"></div>
+        <div class="popup-image"><img src="pictures/default.png" alt=""></div>
+        <p class="percorso-detail-desc" id="percorso-detail-desc"></p>
+        <button class="percorso-card-btn" id="percorso-detail-filter-btn">Filtra sulla mappa</button>
+      </div>
     </div>
 
   </div>
@@ -331,6 +351,7 @@ body.view-3d .marker-stem::after { opacity:1; }
       </svg>
       <span id="sidebar-address"></span>
     </div>
+    <div class="popup-image"><img src="pictures/default.png" alt=""></div>
     <div class="popup-percorsi" id="sidebar-percorsi"></div>
     <div class="popup-desc collapsed" id="sidebar-desc"></div>
     <button class="popup-expand" id="sidebar-expand-btn" onclick="toggleSidebarDesc()">
@@ -338,10 +359,6 @@ body.view-3d .marker-stem::after { opacity:1; }
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path id="sidebar-expand-chevron" d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </div>
-  <button class="popup-cta" onclick="openScheda(activeMarkerId)">
-    Apri scheda completa
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
 </div>
 
 <!-- CONTROLS PANEL bottom-right -->
@@ -428,6 +445,15 @@ const PERCORSO_FULL_LABELS = {
   P4:'Non isolarsi', P5:'Gestire comportamento e memoria', P6:'Questioni pratiche e burocratiche',
   P7:'Prendersi cura di chi si prende cura',
 };
+const PERCORSO_DESCRIPTIONS = {
+  P1: 'Il primo passo dopo i sintomi: dove rivolgersi per una valutazione neurologica, quali esami servono, come leggere una diagnosi di demenza o Alzheimer e quali servizi del territorio possono aiutare a orientarsi tra ospedali, CDCD e centri specialistici, evitando di affrontare da soli un percorso spesso confuso e frammentato.',
+  P2: 'Il supporto pratico per organizzare le giornate: assistenza domiciliare, servizio pasti, accompagnamento per commissioni e visite, aiuto nella cura della persona. Una rete di cooperative sociali e servizi pubblici che alleggerisce il carico quotidiano di chi convive con la demenza e di chi se ne prende cura ogni giorno.',
+  P3: 'Attività fisica, gruppi di cammino, ginnastica dolce e laboratori pensati per mantenere mobilità e stimolazione cognitiva. Centri diurni, associazioni sportive e iniziative di quartiere offrono occasioni regolari per uscire di casa in sicurezza, restare attivi e continuare a vivere la città anche dopo la diagnosi.',
+  P4: 'Spazi di socializzazione come Alzheimer Café, gruppi di lettura in biblioteca e centri di incontro, pensati per persone con demenza e familiari. Un’occasione per condividere esperienze, ridurre lo stigma e costruire legami di comunità, contrastando l’isolamento che spesso accompagna la malattia sia per chi la vive sia per chi assiste.',
+  P5: 'Monitoraggio clinico dei disturbi comportamentali e cognitivi: visite di controllo, terapie farmacologiche e non farmacologiche, stimolazione cognitiva e musicoterapia. Centri specialistici e associazioni offrono strumenti concreti per affrontare i cambiamenti di memoria e comportamento nelle diverse fasi della malattia, con un supporto continuativo nel tempo.',
+  P6: 'Invalidità civile, indennità di accompagnamento, legge 104, amministratore di sostegno, ISEE e contratti per assistenti familiari. Patronati, CAF e sportelli sociali territoriali aiutano a orientarsi tra pratiche spesso complesse, garantendo l’accesso ai diritti e alle agevolazioni economiche previste per chi convive con la demenza.',
+  P7: 'Gruppi di auto-mutuo-aiuto, supporto psicologico individuale e di gruppo, formazione su tecniche di comunicazione e gestione dello stress. Un percorso dedicato ai caregiver, spesso invisibili, per non restare soli nel carico assistenziale quotidiano e trovare ascolto, competenze e sollievo condiviso con altre famiglie.',
+};
 
 const MUNICIPI_GEOJSON = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"id":1,"name":"Municipio 1"},"geometry":{"type":"Polygon","coordinates":[[[9.1565,45.4335],[9.1565,45.4795],[9.222,45.4795],[9.222,45.4335],[9.1565,45.4335]]]}},{"type":"Feature","properties":{"id":2,"name":"Municipio 2"},"geometry":{"type":"Polygon","coordinates":[[[9.198,45.466],[9.198,45.533],[9.278,45.533],[9.278,45.466],[9.198,45.466]]]}},{"type":"Feature","properties":{"id":3,"name":"Municipio 3"},"geometry":{"type":"Polygon","coordinates":[[[9.195,45.427],[9.195,45.47],[9.272,45.47],[9.272,45.427],[9.195,45.427]]]}},{"type":"Feature","properties":{"id":4,"name":"Municipio 4"},"geometry":{"type":"Polygon","coordinates":[[[9.185,45.411],[9.185,45.451],[9.274,45.451],[9.274,45.411],[9.185,45.411]]]}},{"type":"Feature","properties":{"id":5,"name":"Municipio 5"},"geometry":{"type":"Polygon","coordinates":[[[9.138,45.407],[9.138,45.458],[9.197,45.458],[9.197,45.407],[9.138,45.407]]]}},{"type":"Feature","properties":{"id":6,"name":"Municipio 6"},"geometry":{"type":"Polygon","coordinates":[[[9.105,45.431],[9.105,45.476],[9.178,45.476],[9.178,45.431],[9.105,45.431]]]}},{"type":"Feature","properties":{"id":7,"name":"Municipio 7"},"geometry":{"type":"Polygon","coordinates":[[[9.064,45.444],[9.064,45.514],[9.16,45.514],[9.16,45.444],[9.064,45.444]]]}},{"type":"Feature","properties":{"id":8,"name":"Municipio 8"},"geometry":{"type":"Polygon","coordinates":[[[9.093,45.472],[9.093,45.518],[9.18,45.518],[9.18,45.472],[9.093,45.472]]]}},{"type":"Feature","properties":{"id":9,"name":"Municipio 9"},"geometry":{"type":"Polygon","coordinates":[[[9.118,45.49],[9.118,45.54],[9.216,45.54],[9.216,45.49],[9.118,45.49]]]}}]};
 
@@ -450,7 +476,7 @@ const CUSTOM_MAP_STYLE = {
   },
   layers: [
     { id: 'background', type: 'background',
-      paint: { 'background-color': '#F5F3EE' } },
+      paint: { 'background-color': '#FAF8F3' } },
     { id: 'water', type: 'fill',
       source: 'composite', 'source-layer': 'water',
       paint: { 'fill-color': '#C8C5BE' } },
@@ -488,7 +514,7 @@ const CUSTOM_MAP_STYLE = {
         'symbol-placement': 'line-center',
         'text-letter-spacing': 0.01,
       },
-      paint: { 'text-color': '#A09D97', 'text-halo-color': '#F5F3EE', 'text-halo-width': 2 } },
+      paint: { 'text-color': '#A09D97', 'text-halo-color': '#FAF8F3', 'text-halo-width': 2 } },
     { id: 'label-neighborhood', type: 'symbol',
       source: 'composite', 'source-layer': 'place_label',
       minzoom: 12,
@@ -500,7 +526,7 @@ const CUSTOM_MAP_STYLE = {
         'text-letter-spacing': 0.12,
         'text-transform': 'uppercase',
       },
-      paint: { 'text-color': '#B0ADA7', 'text-halo-color': '#F5F3EE', 'text-halo-width': 1.5 } },
+      paint: { 'text-color': '#B0ADA7', 'text-halo-color': '#FAF8F3', 'text-halo-width': 1.5 } },
     { id: 'label-place', type: 'symbol',
       source: 'composite', 'source-layer': 'place_label',
       filter: ['match', ['get', 'class'], ['settlement', 'settlement_subdivision'], true, false],
@@ -510,7 +536,7 @@ const CUSTOM_MAP_STYLE = {
         'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 13, 14],
         'text-letter-spacing': 0.03,
       },
-      paint: { 'text-color': '#8A8783', 'text-halo-color': '#F5F3EE', 'text-halo-width': 2 } },
+      paint: { 'text-color': '#8A8783', 'text-halo-color': '#FAF8F3', 'text-halo-width': 2 } },
   ]
 };
 
@@ -597,7 +623,7 @@ map.on('load', () => {
     },
     paint: {
       'text-color': '#8A8783',
-      'text-halo-color': '#F5F3EE',
+      'text-halo-color': '#FAF8F3',
       'text-halo-width': 1.5,
       'text-opacity': 0.65,
     },
@@ -902,12 +928,6 @@ function stopOrbit() {
   if (orbitInterval) { clearInterval(orbitInterval); orbitInterval = null; }
 }
 
-function openScheda(id) {
-  const n = DATASET.find(d => d.id === id);
-  if (!n) return;
-  alert(`${n.name}\n${n.indirizzo}\n\nPercorsi: ${n.percorsi.map(p=>p.id).join(', ')}`);
-}
-
 // ── 2D / 3D views ──
 function setView2D() {
   is3D = false;
@@ -1106,12 +1126,33 @@ function renderPercorsiCards() {
       <div class="percorso-card-id">${pid}</div>
       <div class="percorso-card-name">${PERCORSO_FULL_LABELS[pid]}</div>
       <div class="percorso-card-count">${count} attori</div>
-      <button class="percorso-card-btn" onclick="selectPercorso('${pid}')">Filtra sulla mappa</button>
     `;
     card.addEventListener('mouseenter', () => previewPercorso(pid));
     card.addEventListener('mouseleave', clearPercorsoPreview);
+    card.addEventListener('click', () => openPercorsoDetail(pid));
     container.appendChild(card);
   });
+}
+
+// ── Percorso detail view (replaces the card list, in-place) ──
+function openPercorsoDetail(pid) {
+  clearPercorsoPreview();
+  document.getElementById('percorso-detail-id').textContent = pid;
+  document.getElementById('percorso-detail-name').textContent = PERCORSO_FULL_LABELS[pid];
+  document.getElementById('percorso-detail-desc').textContent = PERCORSO_DESCRIPTIONS[pid];
+
+  const btn = document.getElementById('percorso-detail-filter-btn');
+  const refreshBtnLabel = () => { btn.textContent = activePercorso === pid ? 'Rimuovi filtro dalla mappa' : 'Filtra sulla mappa'; };
+  refreshBtnLabel();
+  btn.onclick = () => { selectPercorso(pid); refreshBtnLabel(); };
+
+  document.getElementById('percorsi-list-view').style.display = 'none';
+  document.getElementById('percorsi-detail-view').style.display = 'block';
+}
+
+function closePercorsoDetail() {
+  document.getElementById('percorsi-detail-view').style.display = 'none';
+  document.getElementById('percorsi-list-view').style.display = 'block';
 }
 
 function selectPercorso(pid) {
