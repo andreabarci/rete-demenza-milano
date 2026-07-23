@@ -39,12 +39,12 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
   position:fixed; top:0; left:0; bottom:0; width:var(--nav-w); z-index:200;
   background:var(--bg); border-right:1px solid var(--border-strong);
   display:flex; flex-direction:column; overflow:hidden;
+  transition:transform var(--transition);
 }
+#app-sidebar.slid-out { transform:translateX(-100%); }
 .app-sidebar-header { padding:24px 24px 16px; }
 .app-sidebar-title { font-family:var(--font-display); font-size:19px; font-style:italic; color:var(--text-primary); letter-spacing:-0.01em; line-height:1.2; }
 .app-sidebar-tabs { display:flex; border-bottom:1px solid var(--border-strong); padding:0 24px; flex-shrink:0; }
-#app-sidebar.chrome-hidden .app-sidebar-header,
-#app-sidebar.chrome-hidden .app-sidebar-tabs { display:none; }
 .tab-btn {
   flex:1; padding:10px 4px; background:none; border:none; border-bottom:2px solid transparent;
   font-family:var(--font-body); font-size:12px; font-weight:500; color:var(--text-tertiary);
@@ -123,11 +123,42 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 }
 .detail-back-btn:hover { color:var(--text-primary); }
 .percorso-detail-id { font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); letter-spacing:0.06em; }
-.percorso-detail-name { font-family:var(--font-display); font-size:20px; margin:2px 0 12px; }
-.percorso-detail-hr { border:none; border-top:1px solid var(--border-strong); margin:14px 0 16px; }
+.percorso-detail-name { font-family:var(--font-display); font-size:20px; margin:2px 0 0; }
 .percorso-detail-desc { font-size:13px; line-height:1.65; color:var(--text-secondary); margin-bottom:16px; }
 .percorso-detail-desc p { margin-bottom:14px; }
 .percorso-detail-desc p:last-child { margin-bottom:0; }
+
+/* ── PERCORSO PANEL: floating "document folder" shape, slides in from the left ── */
+#percorso-panel {
+  position:fixed; top:16px; left:16px; bottom:16px;
+  width:calc(var(--nav-w) - 16px); z-index:205;
+  display:flex; flex-direction:column;
+  transform:translateX(-120%);
+  transition:transform var(--transition);
+}
+#percorso-panel.open { transform:translateX(0); }
+.folder-tab {
+  align-self:flex-start; flex-shrink:0;
+  background:var(--surface);
+  border-radius:14px 14px 0 0;
+  padding:10px 20px 0;
+  box-shadow:0 -2px 10px rgba(0,0,0,0.05);
+}
+.folder-tab .detail-back-btn { padding-bottom:10px; }
+.folder-body {
+  flex:1; min-height:0; overflow-y:auto;
+  background:var(--surface);
+  border-radius:0 14px 14px 14px;
+  box-shadow:3px 6px 28px rgba(0,0,0,0.18);
+  padding:0 24px 24px;
+}
+.percorso-sticky-header {
+  position:sticky; top:0; z-index:2;
+  background:var(--surface);
+  padding-top:20px; padding-bottom:12px; margin-bottom:12px;
+  border-bottom:1px solid var(--border-strong);
+}
+#category-detail-view .detail-back-btn { padding-top:20px; }
 
 /* Inline category pill (used inside percorso descriptions) */
 .category-pill {
@@ -342,30 +373,6 @@ body.view-3d .marker-stem::after { opacity:1; }
       <div id="percorsi-list-view">
         <div id="percorsi-list"></div>
       </div>
-      <div id="percorsi-detail-view" style="display:none">
-        <button class="detail-back-btn" onclick="closePercorsoDetail()">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M8 1.5L3 5l5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Torna ai percorsi
-        </button>
-        <div class="percorso-detail-id" id="percorso-detail-id"></div>
-        <div class="percorso-detail-name" id="percorso-detail-name"></div>
-        <hr class="percorso-detail-hr">
-        <div class="popup-image"><img id="percorso-detail-image" src="pictures/default.png" alt=""></div>
-        <div class="percorso-detail-desc" id="percorso-detail-desc"></div>
-        <button class="percorso-card-btn" id="percorso-detail-filter-btn">Filtra sulla mappa</button>
-      </div>
-      <div id="category-detail-view" style="display:none">
-        <button class="detail-back-btn" onclick="closeCategoryDetail()">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M8 1.5L3 5l5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Torna al percorso
-        </button>
-        <div class="dataset-category-header" id="category-detail-header">
-          <img class="marker-icon dataset-category-icon" id="category-detail-icon" alt="">
-          <span class="dataset-category-name" id="category-detail-name"></span>
-          <span class="dataset-category-count" id="category-detail-count"></span>
-        </div>
-        <div id="category-detail-list"></div>
-      </div>
     </div>
 
   </div>
@@ -398,6 +405,44 @@ body.view-3d .marker-stem::after { opacity:1; }
       <span id="sidebar-expand-label">Leggi di più</span>
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path id="sidebar-expand-chevron" d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
+  </div>
+</div>
+
+<!-- PERCORSO PANEL (floating, folder-tab shape, slides in from the left) -->
+<div id="percorso-panel">
+  <div class="folder-tab">
+    <button class="detail-back-btn" onclick="closePercorsoDetail()">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M8 1.5L3 5l5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Torna ai percorsi
+    </button>
+  </div>
+  <div class="folder-body">
+
+    <div id="percorsi-detail-view" style="display:none">
+      <div class="percorso-sticky-header">
+        <div class="percorso-detail-id" id="percorso-detail-id"></div>
+        <div class="percorso-detail-name" id="percorso-detail-name"></div>
+      </div>
+      <div class="popup-image"><img id="percorso-detail-image" src="pictures/default.png" alt=""></div>
+      <div class="percorso-detail-desc" id="percorso-detail-desc"></div>
+      <button class="percorso-card-btn" id="percorso-detail-filter-btn">Filtra sulla mappa</button>
+    </div>
+
+    <div id="category-detail-view" style="display:none">
+      <button class="detail-back-btn" onclick="closeCategoryDetail()">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M8 1.5L3 5l5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Torna al percorso
+      </button>
+      <div class="percorso-sticky-header">
+        <div class="dataset-category-header" id="category-detail-header">
+          <img class="marker-icon dataset-category-icon" id="category-detail-icon" alt="">
+          <span class="dataset-category-name" id="category-detail-name"></span>
+          <span class="dataset-category-count" id="category-detail-count"></span>
+        </div>
+      </div>
+      <div id="category-detail-list"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1060,7 +1105,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${name}`));
 
   // Filters only apply while their own tab is active; leaving it resets the map.
-  if (name !== 'percorsi') closePercorsoDetail(); // also restores the header/tabs
+  if (name !== 'percorsi') closePercorsoDetail(); // also slides the percorso panel away and the nav back in
 
   let changed = false;
   if (name !== 'dataset' && activeMacros.size < 3) {
@@ -1190,17 +1235,15 @@ function openPercorsoDetail(pid) {
   refreshBtnLabel();
   btn.onclick = () => { selectPercorso(pid); refreshBtnLabel(); };
 
-  document.getElementById('percorsi-list-view').style.display = 'none';
   document.getElementById('category-detail-view').style.display = 'none';
   document.getElementById('percorsi-detail-view').style.display = 'block';
-  document.getElementById('app-sidebar').classList.add('chrome-hidden');
+  document.getElementById('percorso-panel').classList.add('open');
+  document.getElementById('app-sidebar').classList.add('slid-out');
 }
 
 function closePercorsoDetail() {
-  document.getElementById('percorsi-detail-view').style.display = 'none';
-  document.getElementById('category-detail-view').style.display = 'none';
-  document.getElementById('percorsi-list-view').style.display = 'block';
-  document.getElementById('app-sidebar').classList.remove('chrome-hidden');
+  document.getElementById('percorso-panel').classList.remove('open');
+  document.getElementById('app-sidebar').classList.remove('slid-out');
 }
 
 // ── Category detail (drilldown from a percorso's inline category pills) ──
