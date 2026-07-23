@@ -131,18 +131,24 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 
 /* Inline category pill (used inside percorso descriptions) */
 .category-pill {
-  display:inline-flex; align-items:center; gap:6px; vertical-align:middle;
-  border:none; border-radius:100px; padding:2px 12px 2px 10px; margin:0 1px;
-  cursor:pointer; font-family:var(--font-body); font-size:0.95em; font-weight:500;
-  color:#fff; line-height:1.5; transition:filter 0.15s ease;
+  display:inline-flex; align-items:center; gap:6px; vertical-align:baseline;
+  border:none; border-radius:100px; padding:1px 12px; margin:0 1px;
+  cursor:pointer; font-family:var(--font-body); font-size:1em; font-weight:500;
+  line-height:inherit; transition:filter 0.15s ease;
+  position:relative; top:2px; /* nudge down to rest on the same line the paragraph text sits on */
 }
-.category-pill:hover { filter:brightness(1.12); }
-.category-pill.sociale        { background:var(--c-sociale); }
-.category-pill.sociosanitario { background:var(--c-sociosanitario); }
-.category-pill.sanitario      { background:var(--c-sanitario); }
-.category-pill-count { font-family:var(--font-mono); font-weight:700; }
-.category-pill-divider { width:1px; height:0.9em; background:rgba(255,255,255,0.5); flex-shrink:0; }
-.category-pill-icon { width:14px; height:14px; object-fit:contain; flex-shrink:0; }
+.category-pill:hover { filter:brightness(0.97); }
+.category-pill.sociale        { background:color-mix(in srgb, var(--c-sociale) 18%, white); color:var(--c-sociale); }
+.category-pill.sociosanitario { background:color-mix(in srgb, var(--c-sociosanitario) 18%, white); color:var(--c-sociosanitario); }
+.category-pill.sanitario      { background:color-mix(in srgb, var(--c-sanitario) 18%, white); color:var(--c-sanitario); }
+.category-pill-count { font-family:var(--font-mono); font-weight:700; color:currentColor; }
+.category-pill-divider { width:1px; height:0.85em; background:currentColor; opacity:0.4; flex-shrink:0; }
+.category-pill-icon {
+  width:13px; height:13px; flex-shrink:0; display:inline-block; background-color:currentColor;
+  mask-size:contain; mask-repeat:no-repeat; mask-position:center;
+  -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center;
+}
+.category-pill-name { color:currentColor; }
 
 /* ── CONTROLS PANEL (bottom-right) ── */
 #ctrl-panel {
@@ -340,7 +346,7 @@ body.view-3d .marker-stem::after { opacity:1; }
         <div class="percorso-detail-id" id="percorso-detail-id"></div>
         <div class="percorso-detail-name" id="percorso-detail-name"></div>
         <hr class="percorso-detail-hr">
-        <div class="popup-image"><img src="pictures/default.png" alt=""></div>
+        <div class="popup-image"><img id="percorso-detail-image" src="pictures/default.png" alt=""></div>
         <div class="percorso-detail-desc" id="percorso-detail-desc"></div>
         <button class="percorso-card-btn" id="percorso-detail-filter-btn">Filtra sulla mappa</button>
       </div>
@@ -467,10 +473,11 @@ const PERCORSO_DESCRIPTIONS = {
 // Inline pill referencing a category: count | icon | name — click opens that
 // category's list, filtered to the percorso the pill appears in (wired in openPercorsoDetail).
 function categoryPillHTML(count, icon, macro, tipo, label) {
+  const maskUrl = `url('icons/1x/${icon}')`;
   return `<button class="category-pill ${macro}" data-tipo="${tipo}">` +
     `<span class="category-pill-count">${count}</span>` +
     `<span class="category-pill-divider"></span>` +
-    `<img class="category-pill-icon" src="icons/1x/${icon}" alt="">` +
+    `<span class="category-pill-icon" style="mask-image:${maskUrl};-webkit-mask-image:${maskUrl};"></span>` +
     `<span class="category-pill-name">${label}</span>` +
   `</button>`;
 }
@@ -479,6 +486,9 @@ function categoryPillHTML(count, icon, macro, tipo, label) {
 // Percorsi without an entry here fall back to the plain PERCORSO_DESCRIPTIONS text.
 const PERCORSO_RICH_KICKERS = {
   P4: 'Percorso 4 · Percorsi della salute',
+};
+const PERCORSO_COVERS = {
+  P4: 'pictures/p-cover-p4-1.jpg',
 };
 const PERCORSO_RICH_DESCRIPTIONS = {
   P4: `
@@ -1159,6 +1169,7 @@ function openPercorsoDetail(pid) {
   clearPercorsoPreview();
   document.getElementById('percorso-detail-id').textContent = PERCORSO_RICH_KICKERS[pid] || pid;
   document.getElementById('percorso-detail-name').textContent = PERCORSO_FULL_LABELS[pid];
+  document.getElementById('percorso-detail-image').src = PERCORSO_COVERS[pid] || 'pictures/default.png';
 
   const descEl = document.getElementById('percorso-detail-desc');
   if (PERCORSO_RICH_DESCRIPTIONS[pid]) {
