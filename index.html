@@ -124,7 +124,25 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 .detail-back-btn:hover { color:var(--text-primary); }
 .percorso-detail-id { font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); letter-spacing:0.06em; }
 .percorso-detail-name { font-family:var(--font-display); font-size:20px; margin:2px 0 12px; }
+.percorso-detail-hr { border:none; border-top:1px solid var(--border-strong); margin:14px 0 16px; }
 .percorso-detail-desc { font-size:13px; line-height:1.65; color:var(--text-secondary); margin-bottom:16px; }
+.percorso-detail-desc p { margin-bottom:14px; }
+.percorso-detail-desc p:last-child { margin-bottom:0; }
+
+/* Inline category pill (used inside percorso descriptions) */
+.category-pill {
+  display:inline-flex; align-items:center; gap:6px; vertical-align:middle;
+  border:none; border-radius:100px; padding:2px 12px 2px 10px; margin:0 1px;
+  cursor:pointer; font-family:var(--font-body); font-size:0.95em; font-weight:500;
+  color:#fff; line-height:1.5; transition:filter 0.15s ease;
+}
+.category-pill:hover { filter:brightness(1.12); }
+.category-pill.sociale        { background:var(--c-sociale); }
+.category-pill.sociosanitario { background:var(--c-sociosanitario); }
+.category-pill.sanitario      { background:var(--c-sanitario); }
+.category-pill-count { font-family:var(--font-mono); font-weight:700; }
+.category-pill-divider { width:1px; height:0.9em; background:rgba(255,255,255,0.5); flex-shrink:0; }
+.category-pill-icon { width:14px; height:14px; object-fit:contain; flex-shrink:0; }
 
 /* ── CONTROLS PANEL (bottom-right) ── */
 #ctrl-panel {
@@ -321,9 +339,22 @@ body.view-3d .marker-stem::after { opacity:1; }
         </button>
         <div class="percorso-detail-id" id="percorso-detail-id"></div>
         <div class="percorso-detail-name" id="percorso-detail-name"></div>
+        <hr class="percorso-detail-hr">
         <div class="popup-image"><img src="pictures/default.png" alt=""></div>
-        <p class="percorso-detail-desc" id="percorso-detail-desc"></p>
+        <div class="percorso-detail-desc" id="percorso-detail-desc"></div>
         <button class="percorso-card-btn" id="percorso-detail-filter-btn">Filtra sulla mappa</button>
+      </div>
+      <div id="category-detail-view" style="display:none">
+        <button class="detail-back-btn" onclick="closeCategoryDetail()">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M8 1.5L3 5l5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Torna al percorso
+        </button>
+        <div class="dataset-category-header" id="category-detail-header">
+          <img class="marker-icon dataset-category-icon" id="category-detail-icon" alt="">
+          <span class="dataset-category-name" id="category-detail-name"></span>
+          <span class="dataset-category-count" id="category-detail-count"></span>
+        </div>
+        <div id="category-detail-list"></div>
       </div>
     </div>
 
@@ -431,6 +462,34 @@ const PERCORSO_DESCRIPTIONS = {
   P5: 'Monitoraggio clinico dei disturbi comportamentali e cognitivi: visite di controllo, terapie farmacologiche e non farmacologiche, stimolazione cognitiva e musicoterapia. Centri specialistici e associazioni offrono strumenti concreti per affrontare i cambiamenti di memoria e comportamento nelle diverse fasi della malattia, con un supporto continuativo nel tempo.',
   P6: 'Invalidità civile, indennità di accompagnamento, legge 104, amministratore di sostegno, ISEE e contratti per assistenti familiari. Patronati, CAF e sportelli sociali territoriali aiutano a orientarsi tra pratiche spesso complesse, garantendo l’accesso ai diritti e alle agevolazioni economiche previste per chi convive con la demenza.',
   P7: 'Gruppi di auto-mutuo-aiuto, supporto psicologico individuale e di gruppo, formazione su tecniche di comunicazione e gestione dello stress. Un percorso dedicato ai caregiver, spesso invisibili, per non restare soli nel carico assistenziale quotidiano e trovare ascolto, competenze e sollievo condiviso con altre famiglie.',
+};
+
+// Inline pill referencing a category: count | icon | name — click opens that
+// category's list, filtered to the percorso the pill appears in (wired in openPercorsoDetail).
+function categoryPillHTML(count, icon, macro, tipo, label) {
+  return `<button class="category-pill ${macro}" data-tipo="${tipo}">` +
+    `<span class="category-pill-count">${count}</span>` +
+    `<span class="category-pill-divider"></span>` +
+    `<img class="category-pill-icon" src="icons/1x/${icon}" alt="">` +
+    `<span class="category-pill-name">${label}</span>` +
+  `</button>`;
+}
+
+// Richer, editorial descriptions for specific percorsi (counts verified against DATASET).
+// Percorsi without an entry here fall back to the plain PERCORSO_DESCRIPTIONS text.
+const PERCORSO_RICH_KICKERS = {
+  P4: 'Percorso 4 · Percorsi della salute',
+};
+const PERCORSO_RICH_DESCRIPTIONS = {
+  P4: `
+    <p>Isolarsi è uno dei rischi più silenziosi di questa fase della vita — può capitare alla persona con demenza, ma capita spesso anche a chi se ne prende cura. Avere un luogo dove uscire di casa, incontrare altre persone, sentirsi ancora parte di qualcosa: non è un dettaglio, è parte della cura.</p>
+    <p>Il percorso raccoglie 67 realtà attive a Milano: 64 appartengono al mondo sociale e di comunità, 3 alla rete sociosanitaria.</p>
+    <p>La parte più consistente non è fatta di servizi pensati apposta per la demenza, ma di luoghi che la città mette a disposizione di tutti, e che si aprono anche a chi la vive.</p>
+    <p>Le ${categoryPillHTML(25, 'icon-biblioteca.png', 'sociale', 'Biblioteca comunale', 'biblioteche comunali')} organizzano gruppi di lettura e attività culturali — alcune hanno anche uno spazio o uno sportello dedicato a chi affronta l'Alzheimer.</p>
+    <p>I ${categoryPillHTML(16, 'icon-gdc.png', 'sociale', 'Gruppo di cammino ATS', 'gruppi di cammino')} attivi nei parchi e nelle piazze offrono un appuntamento settimanale di attività fisica condivisa, aperto a chiunque.</p>
+    <p>Accanto a questa rete diffusa esistono spazi pensati in modo specifico: gli ${categoryPillHTML(11, 'icon-alzheimer-cafe.png', 'sociale', 'Alzheimer Café', 'Alzheimer Café')} della città, ospitati in associazioni, centri di quartiere e RSA, dove la persona con demenza e chi se ne prende cura possono incontrarsi insieme, senza dover spiegare nulla.</p>
+    <p>Completano il quadro altre 15 realtà di comunità: ${categoryPillHTML(4, 'icon-associazione.png', 'sociale', 'Associazione', 'associazioni')}, ${categoryPillHTML(4, 'icon-centro-socio-ricreativo.png', 'sociale', 'Centro socio-ricreativo', 'centri socio-ricreativi')} e ${categoryPillHTML(2, 'icon-cooperativa.png', 'sociosanitario', 'Cooperativa sociale', 'cooperative sociali')}, insieme a un piccolo gruppo di consultori, reti di ascolto e realtà associative e sportive che accompagnano, orientano, offrono un momento di sollievo.</p>
+  `,
 };
 
 // NIL (Nuclei di Identita' Locale) label points, tiered by zoom (see renderNilLabels)
@@ -1098,9 +1157,18 @@ function renderPercorsiCards() {
 // ── Percorso detail view (replaces the card list, in-place) ──
 function openPercorsoDetail(pid) {
   clearPercorsoPreview();
-  document.getElementById('percorso-detail-id').textContent = pid;
+  document.getElementById('percorso-detail-id').textContent = PERCORSO_RICH_KICKERS[pid] || pid;
   document.getElementById('percorso-detail-name').textContent = PERCORSO_FULL_LABELS[pid];
-  document.getElementById('percorso-detail-desc').textContent = PERCORSO_DESCRIPTIONS[pid];
+
+  const descEl = document.getElementById('percorso-detail-desc');
+  if (PERCORSO_RICH_DESCRIPTIONS[pid]) {
+    descEl.innerHTML = PERCORSO_RICH_DESCRIPTIONS[pid];
+    descEl.querySelectorAll('.category-pill').forEach(btn => {
+      btn.addEventListener('click', () => openCategoryDetail(btn.dataset.tipo, pid));
+    });
+  } else {
+    descEl.textContent = PERCORSO_DESCRIPTIONS[pid];
+  }
 
   const btn = document.getElementById('percorso-detail-filter-btn');
   const refreshBtnLabel = () => { btn.textContent = activePercorso === pid ? 'Rimuovi filtro dalla mappa' : 'Filtra sulla mappa'; };
@@ -1108,14 +1176,55 @@ function openPercorsoDetail(pid) {
   btn.onclick = () => { selectPercorso(pid); refreshBtnLabel(); };
 
   document.getElementById('percorsi-list-view').style.display = 'none';
+  document.getElementById('category-detail-view').style.display = 'none';
   document.getElementById('percorsi-detail-view').style.display = 'block';
   document.getElementById('app-sidebar').classList.add('chrome-hidden');
 }
 
 function closePercorsoDetail() {
   document.getElementById('percorsi-detail-view').style.display = 'none';
+  document.getElementById('category-detail-view').style.display = 'none';
   document.getElementById('percorsi-list-view').style.display = 'block';
   document.getElementById('app-sidebar').classList.remove('chrome-hidden');
+}
+
+// ── Category detail (drilldown from a percorso's inline category pills) ──
+function openCategoryDetail(tipo, pid) {
+  const nodes = DATASET
+    .filter(n => n.tipo === tipo && n.percorsi.some(p => p.id === pid))
+    .sort((a, b) => a.name.localeCompare(b.name, 'it'));
+  if (!nodes.length) return;
+  const macro = nodes[0].macro;
+  const icon = nodes[0].icon;
+
+  const iconEl = document.getElementById('category-detail-icon');
+  iconEl.src = `icons/1x/${icon}`;
+  iconEl.className = `marker-icon dataset-category-icon ${macro}`;
+  document.getElementById('category-detail-name').textContent = tipo;
+  document.getElementById('category-detail-count').textContent = nodes.length;
+
+  const list = document.getElementById('category-detail-list');
+  list.innerHTML = '';
+  nodes.forEach(node => {
+    const item = document.createElement('div');
+    item.className = `dataset-item ${macro}`;
+    item.textContent = node.name;
+    item.addEventListener('mouseenter', () => highlightNodeOnMap(node.id));
+    item.addEventListener('mouseleave', () => unhighlightNodeOnMap(node.id));
+    item.addEventListener('click', () => {
+      const p = pointMarkers[node.id];
+      if (p) handleMarkerClick(node, p.el);
+    });
+    list.appendChild(item);
+  });
+
+  document.getElementById('percorsi-detail-view').style.display = 'none';
+  document.getElementById('category-detail-view').style.display = 'block';
+}
+
+function closeCategoryDetail() {
+  document.getElementById('category-detail-view').style.display = 'none';
+  document.getElementById('percorsi-detail-view').style.display = 'block';
 }
 
 function selectPercorso(pid) {
