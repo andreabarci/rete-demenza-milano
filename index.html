@@ -567,7 +567,7 @@ const CUSTOM_MAP_STYLE = {
   },
   layers: [
     { id: 'background', type: 'background',
-      paint: { 'background-color': '#FAF8F3' } },
+      paint: { 'background-color': '#FFFFFF' } },
     { id: 'water', type: 'fill',
       source: 'composite', 'source-layer': 'water',
       paint: { 'fill-color': '#C8C5BE' } },
@@ -605,7 +605,7 @@ const CUSTOM_MAP_STYLE = {
         'symbol-placement': 'line-center',
         'text-letter-spacing': 0.01,
       },
-      paint: { 'text-color': '#A09D97', 'text-halo-color': '#FAF8F3', 'text-halo-width': 2 } },
+      paint: { 'text-color': '#A09D97', 'text-halo-color': '#FFFFFF', 'text-halo-width': 2 } },
     { id: 'label-neighborhood', type: 'symbol',
       source: 'composite', 'source-layer': 'place_label',
       minzoom: 12,
@@ -617,7 +617,7 @@ const CUSTOM_MAP_STYLE = {
         'text-letter-spacing': 0.12,
         'text-transform': 'uppercase',
       },
-      paint: { 'text-color': '#B0ADA7', 'text-halo-color': '#FAF8F3', 'text-halo-width': 1.5 } },
+      paint: { 'text-color': '#B0ADA7', 'text-halo-color': '#FFFFFF', 'text-halo-width': 1.5 } },
     { id: 'label-place', type: 'symbol',
       source: 'composite', 'source-layer': 'place_label',
       filter: ['match', ['get', 'class'], ['settlement', 'settlement_subdivision'], true, false],
@@ -627,7 +627,7 @@ const CUSTOM_MAP_STYLE = {
         'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 13, 14],
         'text-letter-spacing': 0.03,
       },
-      paint: { 'text-color': '#8A8783', 'text-halo-color': '#FAF8F3', 'text-halo-width': 2 } },
+      paint: { 'text-color': '#8A8783', 'text-halo-color': '#FFFFFF', 'text-halo-width': 2 } },
   ]
 };
 
@@ -724,7 +724,7 @@ map.on('load', () => {
     },
     paint: {
       'text-color': '#6B6760',
-      'text-halo-color': '#FAF8F3',
+      'text-halo-color': '#FFFFFF',
       'text-halo-width': 1.5,
     },
   });
