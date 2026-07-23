@@ -32,7 +32,7 @@
 html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-body); background:var(--bg); color:var(--text-primary); }
 
 /* ── MAP ── */
-#map { position:fixed; top:0; right:0; bottom:0; left:var(--nav-w); }
+#map { position:fixed; inset:0; }
 
 /* ── APP SIDEBAR (persistent left nav) ── */
 #app-sidebar {
@@ -155,7 +155,8 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 .percorso-sticky-header {
   position:sticky; top:0; z-index:2;
   background:var(--surface);
-  padding-top:20px; padding-bottom:12px; margin-bottom:12px;
+  width:calc(100% + 48px); margin:0 -24px;
+  padding:20px 24px 12px;
   border-bottom:1px solid var(--border-strong);
 }
 #category-detail-view .detail-back-btn { padding-top:20px; }
@@ -247,7 +248,7 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 .popup-image { width:100%; aspect-ratio:16/9; border-radius:var(--radius-sm); overflow:hidden; margin-bottom:12px; background:var(--bg); }
 .popup-image img { width:100%; height:100%; object-fit:cover; display:block; }
 #percorsi-detail-view .popup-image {
-  width:calc(100% + 48px); margin-left:-24px; margin-right:-24px; margin-top:-4px;
+  width:calc(100% + 48px); margin:0 -24px;
   border-radius:0;
 }
 .popup-percorsi { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:11px; }
@@ -748,6 +749,16 @@ map.on('load', () => {
   applyFilter();
 });
 map.on('moveend', renderClusters);
+
+// The map canvas now spans the full screen and runs underneath the persistent
+// nav sidebar; pad the camera so "center" still lands in the visible area
+// (not hidden behind the opaque sidebar), and keep it in sync on resize.
+function updateMapPadding() {
+  const navWidth = document.getElementById('app-sidebar').getBoundingClientRect().width;
+  map.setPadding({ left: navWidth, top: 0, right: 0, bottom: 0 });
+}
+map.on('load', updateMapPadding);
+window.addEventListener('resize', updateMapPadding);
 
 // ── Clustering ──
 const CLUSTER_RADIUS_PX = 110; // screen-pixel aggregation radius, shared with the hover-area circle
