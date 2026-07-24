@@ -127,8 +127,10 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 .percorso-detail-id { font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); letter-spacing:0.06em; }
 .percorso-detail-name { font-family:var(--font-display); font-size:20px; margin:2px 0 0; }
 .percorso-detail-desc { font-size:13px; line-height:1.65; color:var(--text-secondary); margin-top:32px; margin-bottom:16px; }
-.percorso-detail-desc p { margin-bottom:14px; }
-.percorso-detail-desc p:last-child { margin-bottom:0; }
+.percorso-detail-desc p { margin:0; padding:18px 0; }
+.percorso-detail-desc p:first-child { padding-top:0; }
+.percorso-detail-desc p:last-child { padding-bottom:0; }
+.percorso-detail-desc p + p { border-top:1px solid rgba(0,0,0,0.1); }
 
 /* ── PERCORSO PANEL: floating "document folder" shape, slides in from the left ── */
 #percorso-panel {
@@ -163,26 +165,31 @@ html, body { height:100%; width:100%; overflow:hidden; font-family:var(--font-bo
 }
 #category-detail-view .detail-back-btn { padding-top:20px; }
 
-/* Inline category pill (used inside percorso descriptions) */
-.category-pill {
-  display:inline-flex; align-items:center; gap:6px; vertical-align:baseline;
-  border:none; border-radius:100px; padding:1px 12px; margin:0 1px;
-  cursor:pointer; font-family:var(--font-body); font-size:1em; font-weight:500;
-  line-height:inherit; transition:filter 0.15s ease;
-  position:relative; top:2px; /* nudge down to rest on the same line the paragraph text sits on */
+/* Inline category reference (used inside percorso descriptions): count + name
+   read as coloured link-text within the paragraph flow, followed by a small
+   flat marker dot (same colour/icon as the map marker, no ring, no shadow). */
+.category-link {
+  display:inline-flex; align-items:center; gap:4px; vertical-align:baseline;
+  background:none; border:none; padding:0; margin:0;
+  cursor:pointer; font-family:var(--font-body); font-size:1em;
+  line-height:inherit; position:relative; top:3px; /* nudge down to rest on the same line the paragraph text sits on */
 }
-.category-pill:hover { filter:brightness(0.97); }
-.category-pill.sociale        { background:color-mix(in srgb, var(--c-sociale) 18%, white); color:var(--c-sociale); }
-.category-pill.sociosanitario { background:color-mix(in srgb, var(--c-sociosanitario) 18%, white); color:var(--c-sociosanitario); }
-.category-pill.sanitario      { background:color-mix(in srgb, var(--c-sanitario) 18%, white); color:var(--c-sanitario); }
-.category-pill-count { font-family:var(--font-mono); font-weight:700; color:currentColor; }
-.category-pill-divider { width:1px; height:0.85em; background:currentColor; opacity:0.4; flex-shrink:0; }
-.category-pill-icon {
-  width:13px; height:13px; flex-shrink:0; display:inline-block; background-color:currentColor;
-  mask-size:contain; mask-repeat:no-repeat; mask-position:center;
-  -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center;
+.category-link-text {
+  font-weight:600;
+  text-decoration:underline; text-decoration-style:dotted; text-underline-offset:2px;
+  transition:text-decoration-style 0.15s ease;
 }
-.category-pill-name { color:currentColor; }
+.category-link:hover .category-link-text { text-decoration-style:solid; }
+.category-link-text.sociale        { color:var(--c-sociale); }
+.category-link-text.sociosanitario { color:var(--c-sociosanitario); }
+.category-link-text.sanitario      { color:var(--c-sanitario); }
+.category-link-icon {
+  display:inline-block; width:15px; height:15px; flex-shrink:0;
+  border-radius:50%; object-fit:cover; background:#fff;
+}
+.category-link-icon.sociale        { background:var(--c-sociale); }
+.category-link-icon.sociosanitario { background:var(--c-sociosanitario); }
+.category-link-icon.sanitario      { background:var(--c-sanitario); }
 
 /* ── CONTROLS PANEL (bottom-right) ── */
 #ctrl-panel {
@@ -518,15 +525,13 @@ const PERCORSO_DESCRIPTIONS = {
   P7: 'Gruppi di auto-mutuo-aiuto, supporto psicologico individuale e di gruppo, formazione su tecniche di comunicazione e gestione dello stress. Un percorso dedicato ai caregiver, spesso invisibili, per non restare soli nel carico assistenziale quotidiano e trovare ascolto, competenze e sollievo condiviso con altre famiglie.',
 };
 
-// Inline pill referencing a category: count | icon | name — click opens that
-// category's list, filtered to the percorso the pill appears in (wired in openPercorsoDetail).
+// Inline reference to a category within a percorso description: "<count> <label>"
+// renders as coloured link-text followed by a small marker dot — click opens that
+// category's list, filtered to the percorso the link appears in (wired in openPercorsoDetail).
 function categoryPillHTML(count, icon, macro, tipo, label) {
-  const maskUrl = `url('icons/1x/${icon}')`;
-  return `<button class="category-pill ${macro}" data-tipo="${tipo}">` +
-    `<span class="category-pill-count">${count}</span>` +
-    `<span class="category-pill-divider"></span>` +
-    `<span class="category-pill-icon" style="mask-image:${maskUrl};-webkit-mask-image:${maskUrl};"></span>` +
-    `<span class="category-pill-name">${label}</span>` +
+  return `<button class="category-link" data-tipo="${tipo}">` +
+    `<span class="category-link-text ${macro}">${count} ${label}</span>` +
+    `<img class="category-link-icon ${macro}" src="icons/1x/${icon}" alt="">` +
   `</button>`;
 }
 
@@ -1234,7 +1239,7 @@ function openPercorsoDetail(pid) {
   const descEl = document.getElementById('percorso-detail-desc');
   if (PERCORSO_RICH_DESCRIPTIONS[pid]) {
     descEl.innerHTML = PERCORSO_RICH_DESCRIPTIONS[pid];
-    descEl.querySelectorAll('.category-pill').forEach(btn => {
+    descEl.querySelectorAll('.category-link').forEach(btn => {
       btn.addEventListener('click', () => openCategoryDetail(btn.dataset.tipo, pid));
     });
   } else {
